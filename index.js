@@ -1,34 +1,43 @@
-// index.js
-// where your node app starts
-
-// init project
 require('dotenv').config();
-var express = require('express');
-var app = express();
+const express = require('express');
+const cors = require('cors');
+const app = express();
 
-// enable CORS (https://en.wikipedia.org/wiki/Cross-origin_resource_sharing)
-// so that your API is remotely testable by FCC
-var cors = require('cors');
-app.use(cors({ optionsSuccessStatus: 200 })); // some legacy browsers choke on 204
+// Basic Configuration
+const port = process.env.PORT || 3000;
 
-// http://expressjs.com/en/starter/static-files.html
-app.use(express.static('public'));
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// http://expressjs.com/en/starter/basic-routing.html
+app.use('/public', express.static(`${process.cwd()}/public`));
+
 app.get('/', function (req, res) {
-  res.sendFile(__dirname + '/views/index.html');
+  res.sendFile(process.cwd() + '/views/index.html');
 });
 
-// your first API endpoint...
-app.get('/api/whoami', function (req, res) {
-  res.json({
-    "ipaddress": "162.158.154.29",
-    "language": "en-US,en;q=0.9,fr-FR;q=0.8,fr;q=0.7,ar;q=0.6",
-    "software": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
-  });
+let urls = [];
+let counter = 1;
+
+app.post('/api/shorturl', function (req, res) {
+  const originalUrl = req.body.url;
+  const shortUrl = counter++;
+
+  urls.push({ original_url: originalUrl, short_url: shortUrl });
+  res.json({ original_url: originalUrl, short_url: shortUrl });
 });
 
-// listen for requests :)
-var listener = app.listen(process.env.PORT || 3000, function () {
-  console.log('Your app is listening on port ' + listener.address().port);
+app.get('/api/shorturl/:shortUrl', function (req, res) {
+  const shortUrl = parseInt(req.params.shortUrl);
+  const foundUrl = urls.find(url => url.short_url === shortUrl);
+
+  if (foundUrl) {
+    res.redirect(foundUrl.original_url);
+  } else {
+    res.json({ error: 'invalid url' });
+  }
+});
+
+app.listen(port, function () {
+  console.log(`Listening on port ${port}`);
 });
